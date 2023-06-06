@@ -13,10 +13,15 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable prefer-destructuring */
+import { Container } from 'typedi';
 import type express from 'express';
 import get from 'lodash/get';
 import stream from 'stream';
 import { promisify } from 'util';
+import { parse as parseContentType } from 'content-type';
+import { parse as parseQueryString } from 'querystring';
+import getRawBody from 'raw-body';
+import { Parser as XmlParser } from 'xml2js';
 
 import { BinaryDataManager, NodeExecuteFunctions, eventEmitter } from 'n8n-core';
 
@@ -41,10 +46,12 @@ import {
 	BINARY_ENCODING,
 	createDeferredPromise,
 	ErrorReporterProxy as ErrorReporter,
+	jsonParse,
 	LoggerProxy as Logger,
 	NodeHelpers,
 } from 'n8n-workflow';
 
+import config from '@/config';
 import type {
 	IExecutionDb,
 	IResponseCallbackData,
@@ -60,11 +67,17 @@ import { ActiveExecutions } from '@/ActiveExecutions';
 import type { User } from '@db/entities/User';
 import type { WorkflowEntity } from '@db/entities/WorkflowEntity';
 import { getWorkflowOwner } from '@/UserManagement/UserManagementHelper';
-import { Container } from 'typedi';
 
 const pipeline = promisify(stream.pipeline);
 
 export const WEBHOOK_METHODS = ['DELETE', 'GET', 'HEAD', 'PATCH', 'POST', 'PUT'];
+
+const xmlParser = new XmlParser({
+	async: true,
+	normalize: true, // Trim whitespace inside text nodes
+	normalizeTags: true, // Transform tags to lowercase
+	explicitArray: false, // Only put properties in array if length > 1
+});
 
 /**
  * Returns all the webhooks which should be created for the given workflow
@@ -228,12 +241,60 @@ export async function executeWebhook(
 	additionalData.httpRequest = req;
 	additionalData.httpResponse = res;
 
+	const binaryData = workflow.expression.getSimpleParameterValue(
+		workflowStartNode,
+		'={{$parameter["options"]["binaryData"]}}',
+		executionMode,
+		additionalData.timezone,
+		additionalKeys,
+		undefined,
+		false,
+	);
+
 	let didSendResponse = false;
 	let runExecutionDataMerge = {};
 	try {
 		// Run the webhook function to see what should be returned and if
 		// the workflow should be executed or not
 		let webhookResultData: IWebhookResponseData;
+
+		// if `Webhook` or `Wait` node, and binaryData is enabled, skip pre-parse the request-body
+		if (!binaryData) {
+			if (!req.rawBody) {
+				const payloadSizeMax = config.getEnv('endpoints.payloadSizeMax');
+				req.rawBody = await getRawBody(req, {
+					length: req.headers['content-length'],
+					limit: `${String(payloadSizeMax)}mb`,
+				});
+			}
+			if (!req.body) {
+				const { type, parameters } = parseContentType(req);
+				const encoding = (parameters.charset ?? 'utf-8').toLowerCase() as BufferEncoding;
+
+				try {
+					if (type === 'application/json') {
+						req.body = jsonParse(req.rawBody.toString(encoding));
+					} else if (type.endsWith('/xml') || type.endsWith('+xml')) {
+						req.body = await xmlParser.parseStringPromise(req.rawBody.toString(encoding));
+					} else if (type === 'application/x-www-form-urlencoded') {
+						req.body = parseQueryString(req.rawBody.toString(encoding), undefined, undefined, {
+							maxKeys: 1000,
+						});
+					} else if (type === 'text/plain') {
+						req.body = req.rawBody.toString(encoding);
+					}
+				} catch (error) {
+					throw new ResponseHelper.UnprocessableRequestError(
+						'Failed to parse request body',
+						error.message,
+					);
+				}
+
+				if (!req.body) {
+					throw new ResponseHelper.UnprocessableRequestError(`Unknown content type: ${type}`);
+				}
+			}
+		}
 
 		try {
 			webhookResultData = await workflow.runWebhook(
@@ -687,11 +748,13 @@ export async function executeWebhook(
 		// eslint-disable-next-line consistent-return
 		return executionId;
 	} catch (e) {
-		if (!didSendResponse) {
-			responseCallback(new Error('There was a problem executing the workflow'), {});
-		}
-
-		throw new ResponseHelper.InternalServerError(e.message);
+		const error =
+			e instanceof ResponseHelper.UnprocessableRequestError
+				? e
+				: new Error('There was a problem executing the workflow');
+		if (!didSendResponse) responseCallback(error, {});
+		else throw error;
+		return;
 	}
 }
 

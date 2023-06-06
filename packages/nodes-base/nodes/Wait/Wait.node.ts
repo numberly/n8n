@@ -13,6 +13,7 @@ import { BINARY_ENCODING, WAIT_TIME_UNLIMITED, NodeOperationError } from 'n8n-wo
 import fs from 'fs';
 import stream from 'stream';
 import { promisify } from 'util';
+import { v4 as uuid } from 'uuid';
 import basicAuth from 'basic-auth';
 import type { Response } from 'express';
 import formidable from 'formidable';
@@ -742,13 +743,15 @@ export class Wait implements INodeType {
 						headers,
 						params: this.getParamsData(),
 						query: this.getQueryData(),
-						body: this.getBodyData(),
+						body: {},
 					},
 				};
 
 				const binaryPropertyName = (options.binaryPropertyName || 'data') as string;
+				const fileName = headers['content-disposition']?.split('filename=')[1] ?? uuid();
 				returnItem.binary![binaryPropertyName] = await this.nodeHelpers.copyBinaryFile(
 					binaryFile.path,
+					fileName,
 					mimeType,
 				);
 
@@ -767,7 +770,7 @@ export class Wait implements INodeType {
 				headers,
 				params: this.getParamsData(),
 				query: this.getQueryData(),
-				body: this.getBodyData(),
+				body: req.body,
 			},
 		};
 

@@ -9,13 +9,18 @@ import type express from 'express';
 import * as ResponseHelper from '@/ResponseHelper';
 import * as WebhookHelpers from '@/WebhookHelpers';
 import { NodeTypes } from '@/NodeTypes';
-import type { IExecutionResponse, IResponseCallbackData, IWorkflowDb } from '@/Interfaces';
+import type {
+	IExecutionResponse,
+	IResponseCallbackData,
+	IWebhookManager,
+	IWorkflowDb,
+} from '@/Interfaces';
 import * as WorkflowExecuteAdditionalData from '@/WorkflowExecuteAdditionalData';
 import { getWorkflowOwner } from '@/UserManagement/UserManagementHelper';
 import { ExecutionRepository } from './databases/repositories';
 
 @Service()
-export class WaitingWebhooks {
+export class WaitingWebhooks implements IWebhookManager {
 	constructor(private nodeTypes: NodeTypes, private executionRepository: ExecutionRepository) {}
 
 	async executeWebhook(
