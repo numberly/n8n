@@ -260,21 +260,26 @@ export async function executeWebhook(
 
 		// if `Webhook` or `Wait` node, and binaryData is enabled, skip pre-parse the request-body
 		if (!binaryData) {
-			if (!req.rawBody) {
-				const payloadSizeMax = config.getEnv('endpoints.payloadSizeMax');
-				req.rawBody = await getRawBody(req, {
-					length: req.headers['content-length'],
-					limit: `${String(payloadSizeMax)}mb`,
-				});
-			}
-			if (!req.body) {
-				const { type, parameters } = parseContentType(req);
-				const encoding = (parameters.charset ?? 'utf-8').toLowerCase() as BufferEncoding;
+			const payloadSizeMax = config.getEnv('endpoints.payloadSizeMax');
+			req.rawBody = await getRawBody(req, {
+				length: req.headers['content-length'],
+				limit: `${String(payloadSizeMax)}mb`,
+			});
+
+			if (req.rawBody?.length) {
+				const { type, parameters } = (() => {
+					try {
+						return parseContentType(req);
+					} catch {
+						return { type: undefined, parameters: undefined };
+					}
+				})();
+				const encoding = (parameters?.charset ?? 'utf-8').toLowerCase() as BufferEncoding;
 
 				try {
 					if (type === 'application/json') {
 						req.body = jsonParse(req.rawBody.toString(encoding));
-					} else if (type.endsWith('/xml') || type.endsWith('+xml')) {
+					} else if (type?.endsWith('/xml') || type?.endsWith('+xml')) {
 						req.body = await xmlParser.parseStringPromise(req.rawBody.toString(encoding));
 					} else if (type === 'application/x-www-form-urlencoded') {
 						req.body = parseQueryString(req.rawBody.toString(encoding), undefined, undefined, {
