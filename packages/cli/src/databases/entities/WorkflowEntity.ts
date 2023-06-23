@@ -23,7 +23,7 @@ import type { WorkflowTagMapping } from './WorkflowTagMapping';
 import { objectRetriever, sqlite } from '../utils/transformers';
 import { AbstractEntity, jsonColumnType } from './AbstractEntity';
 import type { IWorkflowDb } from '@/Interfaces';
-import { generateNanoId } from '../utils/generators';
+import { generateId } from '../utils/generators';
 
 @Entity()
 export class WorkflowEntity extends AbstractEntity implements IWorkflowDb {
@@ -31,14 +31,14 @@ export class WorkflowEntity extends AbstractEntity implements IWorkflowDb {
 		super();
 		Object.assign(this, data);
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 
 	@BeforeInsert()
-	nanoId() {
+	generateId() {
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 

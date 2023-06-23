@@ -33,7 +33,7 @@ import type {
 	PostgresSchemaSection,
 } from './types';
 import type { ExecutionData } from '@/databases/entities/ExecutionData';
-import { generateNanoId } from '@/databases/utils/generators';
+import { generateId } from '@db/utils/generators';
 
 export type TestDBType = 'postgres' | 'mysql';
 
@@ -384,7 +384,7 @@ export async function createTag(attributes: Partial<TagEntity> = {}) {
 	const { name } = attributes;
 
 	return Db.collections.Tag.save({
-		id: generateNanoId(),
+		id: generateId(),
 		name: name ?? randomName(),
 		...attributes,
 	});
@@ -515,7 +515,7 @@ export async function getWorkflowSharing(workflow: WorkflowEntity) {
 
 export async function createVariable(key: string, value: string) {
 	return Db.collections.Variables.save({
-		id: generateNanoId(),
+		id: generateId(),
 		key,
 		value,
 	});

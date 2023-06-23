@@ -40,7 +40,7 @@ variablesController.post(
 );
 
 variablesController.get(
-	'/:id(\\w+)',
+	'/:id([\\w-]+)',
 	ResponseHelper.send(async (req: VariablesRequest.Get) => {
 		const id = req.params.id;
 		const variable = await VariablesService.get(id);
@@ -52,14 +52,14 @@ variablesController.get(
 );
 
 variablesController.patch(
-	'/:id(\\w+)',
+	'/:id([\\w-]+)',
 	ResponseHelper.send(async () => {
 		throw new ResponseHelper.BadRequestError('No variables license found');
 	}),
 );
 
 variablesController.delete(
-	'/:id(\\w+)',
+	'/:id([\\w-]+)',
 	ResponseHelper.send(async (req: VariablesRequest.Delete) => {
 		const id = req.params.id;
 		if (req.user.globalRole.name !== 'owner') {

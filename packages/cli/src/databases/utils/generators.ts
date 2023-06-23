@@ -1,6 +1,3 @@
-import { customAlphabet } from 'nanoid';
-const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 16);
+import humanId from 'human-id';
 
-export function generateNanoId() {
-	return nanoid();
-}
+export const generateId = () => humanId({ capitalize: false, separator: '-' }); //nanoid();

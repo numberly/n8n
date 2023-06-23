@@ -1,19 +1,19 @@
 import { BeforeInsert, Column, Entity, PrimaryColumn } from 'typeorm';
-import { generateNanoId } from '../utils/generators';
+import { generateId } from '../utils/generators';
 
 @Entity()
 export class Variables {
 	constructor(data?: Partial<Variables>) {
 		Object.assign(this, data);
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 
 	@BeforeInsert()
-	nanoId() {
+	generateId() {
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 

@@ -4,7 +4,7 @@ import { InternalHooks } from '@/InternalHooks';
 import Container from 'typedi';
 import { canCreateNewVariable } from './enviromentHelpers';
 import { VariablesService } from './variables.service';
-import { generateNanoId } from '../../databases/utils/generators';
+import { generateId } from '@db/utils/generators';
 
 export class VariablesLicenseError extends Error {}
 export class VariablesValidationError extends Error {}
@@ -35,7 +35,7 @@ export class EEVariablesService extends VariablesService {
 		void Container.get(InternalHooks).onVariableCreated({ variable_type: variable.type });
 		return collections.Variables.save({
 			...variable,
-			id: generateNanoId(),
+			id: generateId(),
 		});
 	}
 

@@ -3,7 +3,7 @@ import { IsString, Length } from 'class-validator';
 import type { WorkflowEntity } from './WorkflowEntity';
 import type { WorkflowTagMapping } from './WorkflowTagMapping';
 import { AbstractEntity } from './AbstractEntity';
-import { generateNanoId } from '../utils/generators';
+import { generateId } from '../utils/generators';
 
 @Entity()
 export class TagEntity extends AbstractEntity {
@@ -11,14 +11,14 @@ export class TagEntity extends AbstractEntity {
 		super();
 		Object.assign(this, data);
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 
 	@BeforeInsert()
-	nanoId() {
+	generateId() {
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 

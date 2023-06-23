@@ -4,21 +4,22 @@ import { IsArray, IsObject, IsString, Length } from 'class-validator';
 import type { SharedCredentials } from './SharedCredentials';
 import { AbstractEntity, jsonColumnType } from './AbstractEntity';
 import type { ICredentialsDb } from '@/Interfaces';
-import { generateNanoId } from '../utils/generators';
+import { generateId } from '../utils/generators';
+
 @Entity()
 export class CredentialsEntity extends AbstractEntity implements ICredentialsDb {
 	constructor(data?: Partial<CredentialsEntity>) {
 		super();
 		Object.assign(this, data);
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 
 	@BeforeInsert()
-	nanoId(): void {
+	generateId(): void {
 		if (!this.id) {
-			this.id = generateNanoId();
+			this.id = generateId();
 		}
 	}
 
